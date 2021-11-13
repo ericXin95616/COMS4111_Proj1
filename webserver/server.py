@@ -13,12 +13,14 @@ import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response
+from flask_session import Session
 from forms import *
+from models import *
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
-
+sess = Session()
 #
 # The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
 #
@@ -65,6 +67,10 @@ def before_request():
         print("uh oh, problem connecting to database")
         import traceback; traceback.print_exc()
         g.conn = None
+
+    if "user_id" in session and session["user_id"]:
+        print(session["user_id"])
+        g.user = Users(session["user_id"])
 
 
 @app.teardown_request
@@ -161,19 +167,9 @@ def index():
 # Notice that the function name is another() rather than index()
 # The functions for each app.route need to have different names
 #
-@app.route('/another')
-def another():
-    return render_template("another.html")
 
 
 # Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
-    name = request.form['name']
-    g.conn.execute('INSERT INTO test(name) VALUES (%s)', name)
-    return redirect('/')
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     loginForm = LoginForm(request.form)
@@ -184,7 +180,61 @@ def login():
 
 @app.route('/home', methods=['GET', 'POST'])
 def home():
-    context = dict(data=["first name", "user name"])
+    searchForm = SearchForm(request.form)
+    cursor = g.conn.execute(
+        "SELECT category_id, category_name FROM category"
+    )
+    for result in cursor:
+        searchForm.category.choices.append((result["category_id"], result["category_name"]))
+
+    products = []
+    cursor = g.conn.execute(
+        "SELECT * FROM product_own"
+    )
+    for result in cursor:
+        user = Users(result[4])
+        products.append(Products(
+            id=result[0],
+            name=result[1],
+            price=result[2],
+            description=result[3],
+            owner=user,
+            comment_obj=result[5]
+        ))
+    if request.method == 'POST' and searchForm.validate():
+        # filter out rows that not meet this search condition
+        searchtxt = searchForm.text.data
+        category = searchForm.category.data
+        update = []
+        for prod in products:
+            if category == 'All' and searchtxt in prod.name:
+                update.append(prod)
+            elif category != 'All' and int(category) in prod.categories and searchtxt in prod.name:
+                update.append(prod)
+        products = update
+
+    context = dict(user=g.user, form=searchForm, products=products)
+    return render_template("home.html", **context)
+
+
+@app.route('/wishlist')
+def wishlist():
+    products = g.user.get_wishlist()
+    context = dict(user=g.user, products=products)
+    return render_template("wishlist.html", **context)
+
+
+@app.route('/orders')
+def orders():
+    products = g.user.get_orders()
+    context = dict(user=g.user, products=products)
+    return render_template("orders.html", **context)
+
+
+@app.route('/sell', methods=['GET', 'POST'])
+def upload_product():
+    print("sell")
+    context = dict(user=g.user)
     return render_template("home.html", **context)
 
 
@@ -212,5 +262,11 @@ if __name__ == "__main__":
       HOST, PORT = host, port
       print("running on %s:%d" % (HOST, PORT))
       app.run(host=HOST, port=PORT, debug=debug, threaded=threaded)
+
+    # set secret key for app session
+    app.secret_key = 'super secret key'
+    app.config['SESSION_TYPE'] = 'filesystem'
+
+    sess.init_app(app)
 
     run()
