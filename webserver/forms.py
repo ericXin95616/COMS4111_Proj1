@@ -1,4 +1,4 @@
-from wtforms import Form, BooleanField, StringField, ValidationError, SelectField
+from wtforms import Form, StringField, ValidationError, SelectField, FloatField, TextAreaField
 from wtforms.validators import InputRequired, Length
 from flask import session
 
@@ -33,3 +33,11 @@ class LoginForm(Form):
 class SearchForm(Form):
     category = SelectField(u'', choices=[('All', 'All')])
     text = StringField('', validators=[Length(max=50)])
+
+
+class ProductForm(Form):
+    name = StringField('Item Name', validators=[InputRequired(), Length(max=100)])
+    category = SelectField(u'Category', choices=[])
+    description = TextAreaField('Description', validators=[InputRequired(), Length(max=300)])
+    price = FloatField('Price', validators=[InputRequired()])
+

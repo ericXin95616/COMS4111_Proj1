@@ -231,11 +231,68 @@ def orders():
     return render_template("orders.html", **context)
 
 
+def create_product(form):
+    """
+    Create a new product in the database.
+    Need to insert a row in belongs_to table, product_own table,
+    and comment_obj table
+    :param form: ProductForm
+    """
+    name = form.name.data
+    category = form.category.data
+    description = form.description.data
+    price = form.price.data
+    # get product_id
+    product_id = None
+    cursor = g.conn.execute(
+        "SELECT MAX(p.product_id) FROM product_own p"
+    )
+    for result in cursor:
+        product_id = int(result[0]) + 1
+    # get comment_obj_id
+    obj_id = None
+    cursor = g.conn.execute(
+        "SELECT MAX(c.obj_id) FROM comment_obj c"
+    )
+    for result in cursor:
+        obj_id = int(result[0]) + 1
+    # insert into comment_obj
+    g.conn.execute(
+        "INSERT INTO comment_obj VALUES (%s)",
+        obj_id
+    )
+    # insert into a product_own
+    g.conn.execute(
+        "INSERT INTO product_own VALUES (%s, %s, %s, %s, %s, %s)",
+        product_id,
+        name,
+        price,
+        description,
+        g.user.user_id,
+        obj_id
+    )
+    # insert into belongs
+    g.conn.execute(
+        "INSERT INTO belongs_to VALUES (%s, %s)",
+        product_id,
+        category
+    )
+
+
 @app.route('/sell', methods=['GET', 'POST'])
 def upload_product():
-    print("sell")
-    context = dict(user=g.user)
-    return render_template("home.html", **context)
+    productForm = ProductForm(request.form)
+    cursor = g.conn.execute(
+        "SELECT category_id, category_name FROM category"
+    )
+    for result in cursor:
+        productForm.category.choices.append((result["category_id"], result["category_name"]))
+
+    if request.method == 'POST' and productForm.validate():
+        create_product(productForm)
+        return redirect('/home')
+    context = dict(user=g.user, form=productForm)
+    return render_template("sell.html", **context)
 
 
 if __name__ == "__main__":
