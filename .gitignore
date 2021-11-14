@@ -1,3 +1,5 @@
+webserver/flask_session/
+webserver/flask_session/*
 .idea/*
 *.tar
 # Byte-compiled / optimized / DLL files
