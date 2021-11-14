@@ -44,3 +44,23 @@
   </div>
 </div>
 {% endmacro %}
+
+{% macro render_comments(comments) %}
+<div class="column col-md-12 mt-3">
+    {% for comment in comments %}
+        <div class="comment-div">
+          <div class="d-flex flex-row">
+            <h5>{{comment.author}}:</h5>
+            <h5 class="ml-3">{{comment.rating}} / 5.0</h5>
+          </div>
+          <div class="comment text-break" style="width:80%; min-width:500px">
+              {{comment}}
+          </div>
+          <div class="create-time mt-1">
+              Written at {{ comment.created_at }}
+          </div>
+        </div>
+        <hr>
+    {% endfor %}
+</div>
+{% endmacro %}

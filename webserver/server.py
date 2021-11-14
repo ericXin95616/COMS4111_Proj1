@@ -12,7 +12,7 @@ import os
   # accessible as a variable in index.html:
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response
+from flask import Flask, request, render_template, g, redirect, Response, url_for, flash
 from flask_session import Session
 from forms import *
 from models import *
@@ -300,7 +300,37 @@ def upload_product():
     return render_template("sell.html", **context)
 
 
-@app.route('/product-details/<id>')
+def create_comment(form, obj_id):
+    rating = form.rating.data
+    comment = form.comment.data
+    # check if this user already write comment for this product
+    cursor = g.conn.execute(
+        "SELECT * FROM comments_created_at_written_for c WHERE c.user_id = %s and c.obj_id = %s",
+        g.user.user_id,
+        obj_id
+    )
+    for result in cursor:
+        return False
+    # get comment_id
+    comment_id = None
+    cursor = g.conn.execute(
+        "SELECT MAX(c.comment_id) FROM comments_created_at_written_for c"
+    )
+    for result in cursor:
+        comment_id = int(result[0]) + 1
+
+    g.conn.execute(
+        "INSERT INTO comments_created_at_written_for(comment_id, rating, comment_content, user_id, obj_id)  VALUES (%s,%s,%s,%s,%s)",
+        comment_id,
+        rating,
+        comment,
+        g.user.user_id,
+        obj_id
+    )
+    return True
+
+
+@app.route('/product-details/<id>', methods=['GET', 'POST'])
 def product_details(id):
     product = None
     cursor = g.conn.execute(
@@ -320,13 +350,103 @@ def product_details(id):
     if product is None:
         return redirect('/404')
 
-    context = dict(product=product)
+    commentForm = CommentForm(request.form)
+    comments = product.get_comments()
+    if request.method == 'POST' and commentForm.validate():
+        if not create_comment(commentForm, product.comment_obj):
+            flash("You cannot write two comments for the same item")
+            return redirect(url_for('product_details', id=id))
+        else:
+            flash("Thank you! We appreciate your comment!")
+            return redirect(url_for('product_details', id=id))
+    context = dict(product=product, comments=comments, form=commentForm)
     return render_template("details.html", **context)
 
 
-@app.route('/seller-details/<id>')
+@app.route('/buy/<id>')
+def buy_product(id):
+    product = None
+    cursor = g.conn.execute(
+        "SELECT * FROM product_own p WHERE p.product_id=%s",
+        id
+    )
+    for result in cursor:
+        user = Users(result[4])
+        product = Products(
+            id=result[0],
+            name=result[1],
+            price=result[2],
+            description=result[3],
+            owner=user,
+            comment_obj=result[5]
+        )
+    if product is None:
+        return redirect('/404')
+
+    # insert a row into buy
+    try:
+        g.conn.execute(
+            "INSERT INTO buy VALUES (%s,%s)",
+            g.user.user_id,
+            product.id
+        )
+    except:
+        # if buy table already had such tuple
+        flash("You already bought %s and you cannot bought it again" % product.name)
+        return redirect(url_for('product_details', id=id))
+    flash("You just bought %s" % product.name)
+    return redirect(url_for('product_details', id=id))
+
+
+@app.route('/wish/<id>')
+def wish_product(id):
+    product = None
+    cursor = g.conn.execute(
+        "SELECT * FROM product_own p WHERE p.product_id=%s",
+        id
+    )
+    for result in cursor:
+        user = Users(result[4])
+        product = Products(
+            id=result[0],
+            name=result[1],
+            price=result[2],
+            description=result[3],
+            owner=user,
+            comment_obj=result[5]
+        )
+    if product is None:
+        return redirect('/404')
+
+    try:
+        g.conn.execute(
+            "INSERT INTO wish VALUES (%s,%s)",
+            g.user.user_id,
+            product.id
+        )
+    except:
+        # if wish table already had such tuple
+        flash("Item %s is already in your wishlist" % product.name)
+        return redirect(url_for('product_details', id=id))
+
+    flash("You just added %s into your wishlist" % product.name)
+    return redirect(url_for('product_details', id=id))
+
+
+@app.route('/seller-details/<id>', methods=['GET', 'POST'])
 def seller_details(id):
-    return redirect('/home')
+    seller = Users(id)
+    comments = seller.get_comments()
+    commentForm = CommentForm(request.form)
+    if request.method == 'POST' and commentForm.validate():
+        if not create_comment(commentForm, seller.obj_id):
+            flash("You cannot write two comments for the same seller")
+            return redirect(url_for('seller_details', id=id))
+        else:
+            flash("Thank you! We appreciate your comment!")
+            return redirect(url_for('seller_details', id=id))
+    context = dict(seller=seller, comments=comments, form=commentForm)
+    return render_template('seller.html', **context)
 
 
 if __name__ == "__main__":

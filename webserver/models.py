@@ -8,13 +8,14 @@ class Users:
     def __init__(self, id):
         self.user_id = id
         cursor = g.conn.execute(
-            "SELECT first_name, last_name, username FROM users u WHERE u.user_id=(%s)",
+            "SELECT u.first_name, u.last_name, u.username, s.obj_id FROM users u, sellers s WHERE u.user_id=(%s) and u.user_id=s.user_id",
             self.user_id,
         )
         for result in cursor:
             self.firstname = result[0]
             self.lastname = result[1]
             self.username = result[2]
+            self.obj_id = result[3]
 
     def get_wishlist(self):
         products = []
@@ -52,6 +53,26 @@ class Users:
             ))
         return products
 
+    def get_rating(self):
+        cursor = g.conn.execute(
+            "SELECT AVG(c.rating) FROM sellers s, comment_obj o, comments_created_at_written_for c WHERE s.obj_id=(%s) and s.obj_id = o.obj_id AND c.obj_id = o.obj_id GROUP BY s.user_id",
+            self.obj_id,
+        )
+        rating = 0.0
+        for result in cursor:
+            rating = float("{:.1f}".format(float(result[0])))
+        return rating
+
+    def get_comments(self):
+        cursor = g.conn.execute(
+            "SELECT c.comment_id FROM comments_created_at_written_for c WHERE c.obj_id = %s",
+            self.obj_id,
+        )
+        comments = []
+        for result in cursor:
+            comments.append(Comment(result[0]))
+        return comments
+
 
 class Products:
     def __str__(self):
@@ -81,3 +102,31 @@ class Products:
         for result in cursor:
             rating = float("{:.1f}".format(float(result[0])))
         return rating
+
+    def get_comments(self):
+        cursor = g.conn.execute(
+            "SELECT c.comment_id FROM comments_created_at_written_for c WHERE c.obj_id = %s",
+            self.comment_obj,
+        )
+        comments = []
+        for result in cursor:
+            comments.append(Comment(result[0]))
+        return comments
+
+
+class Comment:
+    def __str__(self):
+        return self.content
+
+    def __init__(self, id):
+        self.id = id
+        cursor = g.conn.execute(
+            "SELECT * FROM comments_created_at_written_for c WHERE c.comment_id = %s",
+            self.id,
+        )
+        for result in cursor:
+            self.rating = result[1]
+            self.content = result[2]
+            self.author = Users(result[3])
+            self.created_at = result[4]
+            self.obj_id = result[5]

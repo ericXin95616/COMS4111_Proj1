@@ -38,6 +38,12 @@ class SearchForm(Form):
 class ProductForm(Form):
     name = StringField('Item Name', validators=[InputRequired(), Length(max=100)])
     category = SelectField(u'Category', choices=[])
-    description = TextAreaField('Description', validators=[InputRequired(), Length(max=300)])
+    description = TextAreaField('Description', validators=[InputRequired(), Length(max=300)], render_kw={'class': 'form-control', 'rows': 5, 'cols': 50})
     price = FloatField('Price', validators=[InputRequired()])
+
+
+class CommentForm(Form):
+    rating = SelectField(u'Rating', choices=[(0,0), (0.5,0.5), (1.0,1.0), (1.5,1.5), (2.0,2.0), (2.5,2.5), (3.0,3.0), (3.5,3.5), (4.0,4.0), (4.5,4.5), (5.0,5.0)])
+    comment = TextAreaField('Comment', validators=[InputRequired(), Length(max=1000)], render_kw={'class': 'form-control', 'rows': 5, 'cols': 100})
+
 
