@@ -208,13 +208,14 @@ def home():
         ))
     if request.method == 'POST' and searchForm.validate():
         # filter out rows that not meet this search condition
-        searchtxt = searchForm.text.data
+        #CASE INSENSITIVE SEARCH
+        searchtxt = searchForm.text.data.casefold()
         category = searchForm.category.data
         update = []
         for prod in products:
-            if category == 'All' and searchtxt in prod.name:
+            if category == 'All' and searchtxt in prod.name.casefold():
                 update.append(prod)
-            elif category != 'All' and int(category) in prod.categories and searchtxt in prod.name:
+            elif category != 'All' and int(category) in prod.categories and searchtxt in prod.name.casefold():
                 update.append(prod)
         products = update
 
