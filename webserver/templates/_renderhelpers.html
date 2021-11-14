@@ -29,11 +29,11 @@
           {% for prod in products %}
             <tr>
               <td class="align-middle">
-                <a href="#">{{prod}}</a>
+                <a href="/product-details/{{prod.id}}">{{prod}}</a>
               </td>
               <td class="align-middle">${{prod.price}}</td>
               <td class="align-middle">
-                <a href="#">{{prod.owner}}</a>
+                <a href="/seller-details/{{prod.owner.user_id}}">{{prod.owner}}</a>
               </td>
               <td class="align-middle">{{ prod.get_rating() }}/5.0</td>
             </tr>

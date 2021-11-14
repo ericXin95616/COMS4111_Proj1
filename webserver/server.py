@@ -170,6 +170,11 @@ def index():
 
 
 # Example of adding new data to the database
+@app.errorhandler(404)
+def page_not_found(e):
+    return "page not found"
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     loginForm = LoginForm(request.form)
@@ -293,6 +298,35 @@ def upload_product():
         return redirect('/home')
     context = dict(user=g.user, form=productForm)
     return render_template("sell.html", **context)
+
+
+@app.route('/product-details/<id>')
+def product_details(id):
+    product = None
+    cursor = g.conn.execute(
+        "SELECT * FROM product_own p WHERE p.product_id=%s",
+        id
+    )
+    for result in cursor:
+        user = Users(result[4])
+        product = Products(
+            id=result[0],
+            name=result[1],
+            price=result[2],
+            description=result[3],
+            owner=user,
+            comment_obj=result[5]
+        )
+    if product is None:
+        return redirect('/404')
+
+    context = dict(product=product)
+    return render_template("details.html", **context)
+
+
+@app.route('/seller-details/<id>')
+def seller_details(id):
+    return redirect('/home')
 
 
 if __name__ == "__main__":
