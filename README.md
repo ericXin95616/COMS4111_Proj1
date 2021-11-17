@@ -19,12 +19,15 @@ Originally, we wanted to include a bidding system where many buyers could insert
 
 A webpage that uses interesting database operation used on this project is "My Wishlist". This page is used to display the wish list of the user, which is added from product details page. When user presses “Add to Wishlist” on product details page, in server.py, def wish_product(id) runs 
 
+```
 cursor = g.conn.execute(
         "SELECT * FROM product_own p WHERE p.product_id=%s",
         id
     )
+```
 , and retrieve information of the tuple with:
 
+```
 for result in cursor:
         user = Users(result[4])
         product = Products(
@@ -35,20 +38,21 @@ for result in cursor:
             owner=user,
             comment_obj=result[5]
         )
-
+```
 With the codes above and the following code, the product chosen is added to the user’s with list:
+```
 g.conn.execute(
             "INSERT INTO wish VALUES (%s,%s)",
             g.user.user_id,
             product.id
         )
-
+```
 One can see that database operation ("SELECT * FROM product_own p WHERE p.product_id=%s", id) was used in this step, to access the data of products such as id, name, etc. This was interesting because it was my first time working with coding project where I retrieve data by accessing a database with commands learned in class, not using an arbitrary input on a console. In addition, on the page “My Wishlist”, the rating of the product is updated whenever additional users contribute on the rating of the product in the list, which was fascinating.
 
 Another interesting feature implemented was recommend. When “Recommend List” on /home is pressed, the web page /recommend shows a list of recommended products based on the wishlist of the user. 
 
 Def recommend() uses the function get_most_wanted(), which runs:
-
+```
 cursor = g.conn.execute(
             "SELECT b.category_id, COUNT(*) FROM belongs_to b, wish w WHERE w.user_id=%s and w.product_id=b.product_id GROUP BY b.category_id",
             self.user_id,
@@ -63,10 +67,11 @@ max_freq = 0
             elif freq == max_freq:
                 category.append(result[0])
         return category
-
+```
 We use database operation “COUNT(*)” , counting the total rows, where user_id of the wish equals that of self, or the current user, and product id of wish equals that of belongs_to. Category ID is selected from this. Then, we find which category shows up the most.
 
 Knowing this information, on server.py:
+```
  categories = g.user.get_most_wanted()
     if not categories:
         context = dict(user=g.user, products=[])
@@ -92,7 +97,7 @@ for result in cursor:
             products.append(p)
 context = dict(user=g.user, products=products)
 return render_template('recommend.html', **context)
-
+```
 This finds the product with rating greater than or equal to 3.5 and is displayed to the user. Recommend function is interesting because it uses the data of wishlist that was created by the user, and is processed for another round, leaving data for what we need-  finding the most frequently added category of products of a wishlist , and finding products with rating greater than or equal to 3.5 among the data creates a suitable recommendation list. We defined the condition to be “recommendable”, and found them using database operations.
 
 
