@@ -17,8 +17,6 @@ class Users:
             self.username = result[2]
             self.obj_id = result[3]
 
-
-
     def get_wishlist(self):
         products = []
         cursor = g.conn.execute(
@@ -40,12 +38,20 @@ class Users:
     def get_most_wanted(self):
         category= []
         #get the most added category(ies) in wishlist
-        cursor = g.conn.execute("SELECT FROM wish w WHERE w.user_id=(%s) GROUP BY category ORDER BY COUNT(*) Limit 1", self.user_id,
+        cursor = g.conn.execute(
+            "SELECT b.category_id, COUNT(*) FROM belongs_to b, wish w WHERE w.user_id=%s and w.product_id=b.product_id GROUP BY b.category_id",
+            self.user_id,
         )
+        max_freq = 0
         for result in cursor:
-                category.append(result)
+            freq = int(result[1])
+            if freq > max_freq:
+                max_freq = freq
+                category.clear()
+                category.append(result[0])
+            elif freq == max_freq:
+                category.append(result[0])
         return category
-     
 
     def get_orders(self):
         products = []

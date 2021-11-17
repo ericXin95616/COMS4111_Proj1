@@ -16,6 +16,7 @@ from flask import Flask, request, render_template, g, redirect, Response, url_fo
 from flask_session import Session
 from forms import *
 from models import *
+import random
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
@@ -181,6 +182,12 @@ def login():
     if request.method == 'POST' and loginForm.validate():
         return redirect('/home')
     return render_template("login.html", form=loginForm)
+
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    session["user_id"] = None
+    return redirect('/login')
 
 
 @app.route('/home', methods=['GET', 'POST'])
@@ -395,7 +402,7 @@ def buy_product(id):
         # if buy table already had such tuple
         flash("You already bought %s and you cannot buy it again" % product.name)
         return redirect(url_for('product_details', id=id))
-        flash("You just bought %s" % product.name)
+    flash("You just bought %s" % product.name)
     return redirect(url_for('product_details', id=id))
 
 
@@ -450,48 +457,35 @@ def seller_details(id):
     return render_template('seller.html', **context)
 
 
-@app.route('/recommendation',methods=['GET', 'POST'])
-def recommendation():
-    category = g.user.get_most_wanted()
+@app.route('/recommend', methods=['GET'])
+def recommend():
+    categories = g.user.get_most_wanted()
+    if not categories:
+        context = dict(user=g.user, products=[])
+        return render_template('recommend.html', **context)
     products = []
-    
-    for p in product_own:
-        for c in category:
-            if p.category_id == c.category_id:
-                user = Users(result[4])
-                products.append(Products(
-                id=result[0],
-                name=result[1],
-                price=result[2],
-                description=result[3],
-                owner=user,
-                comment_obj=result[5]
-        ))
-        
-    searchForm = SearchForm(request.form)
+    i = random.randint(0, len(categories) - 1)
+    category = categories[i]
     cursor = g.conn.execute(
-        "SELECT category_id, category_name FROM category"
+        "SELECT * FROM product_own p, belongs_to b WHERE p.product_id=b.product_id and b.category_id=%s",
+        category,
     )
-  
-    if request.method == 'POST' and searchForm.validate():
-        # filter out rows that not meet this search condition
-        #CASE INSENSITIVE SEARCH
-        searchtxt = searchForm.text.data.casefold()
-        category = searchForm.category.data
-        update = []
-        for prod in products:
-            if category == 'All' and searchtxt in prod.name.casefold():
-                update.append(prod)
-            elif category != 'All' and int(category) in prod.categories and searchtxt in prod.name.casefold():
-                update.append(prod)
-        products = update
+    for result in cursor:
+        user = Users(result[4])
+        p = Products(
+            id=result[0],
+            name=result[1],
+            price=result[2],
+            description=result[3],
+            owner=user,
+            comment_obj=result[5]
+        )
+        if p.get_rating() >= 3.5:
+            products.append(p)
 
-        context = dict(user=g.user, form=searchForm, products=products)
-        return render_template("recommendation.html", **context)
-    
-    
+    context = dict(user=g.user, products=products)
+    return render_template('recommend.html', **context)
 
-    
 
 if __name__ == "__main__":
     import click
