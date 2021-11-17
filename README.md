@@ -8,7 +8,7 @@ bx2196
 
 
 URL address of our web application:
-http://104.196.130.209:8111/
+http://35.237.109.152:8111/
 
 
 We implemented everything specified in proposal of this project, except the bidding system, and recommendation system.
