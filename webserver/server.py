@@ -355,7 +355,7 @@ def product_details(id):
     comments = product.get_comments()
     if request.method == 'POST' and commentForm.validate():
         if not create_comment(commentForm, product.comment_obj):
-            flash("You cannot write two comments for the same item")
+            flash("You cannot write two comments for the same product")
             return redirect(url_for('product_details', id=id))
         else:
             flash("Thank you! We appreciate your comment!")
@@ -393,9 +393,9 @@ def buy_product(id):
         )
     except:
         # if buy table already had such tuple
-        flash("You already bought %s and you cannot bought it again" % product.name)
+        flash("You already bought %s and you cannot buy it again" % product.name)
         return redirect(url_for('product_details', id=id))
-    flash("You just bought %s" % product.name)
+        flash("You just bought %s" % product.name)
     return redirect(url_for('product_details', id=id))
 
 
@@ -449,6 +449,49 @@ def seller_details(id):
     context = dict(seller=seller, comments=comments, form=commentForm)
     return render_template('seller.html', **context)
 
+
+@app.route('/recommendation',methods=['GET', 'POST'])
+def recommendation():
+    category = g.user.get_most_wanted()
+    products = []
+    
+    for p in product_own:
+        for c in category:
+            if p.category_id == c.category_id:
+                user = Users(result[4])
+                products.append(Products(
+                id=result[0],
+                name=result[1],
+                price=result[2],
+                description=result[3],
+                owner=user,
+                comment_obj=result[5]
+        ))
+        
+    searchForm = SearchForm(request.form)
+    cursor = g.conn.execute(
+        "SELECT category_id, category_name FROM category"
+    )
+  
+    if request.method == 'POST' and searchForm.validate():
+        # filter out rows that not meet this search condition
+        #CASE INSENSITIVE SEARCH
+        searchtxt = searchForm.text.data.casefold()
+        category = searchForm.category.data
+        update = []
+        for prod in products:
+            if category == 'All' and searchtxt in prod.name.casefold():
+                update.append(prod)
+            elif category != 'All' and int(category) in prod.categories and searchtxt in prod.name.casefold():
+                update.append(prod)
+        products = update
+
+        context = dict(user=g.user, form=searchForm, products=products)
+        return render_template("recommendation.html", **context)
+    
+    
+
+    
 
 if __name__ == "__main__":
     import click
