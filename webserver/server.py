@@ -33,7 +33,7 @@ sess = Session()
 #
 #     DATABASEURI = "postgresql://gravano:foobar@34.74.246.148/proj1part2"
 #
-DATABASEURI = "postgresql://bx2196:7282@34.74.246.148/proj1part2"
+DATABASEURI = "postgresql://zy2447:9829@w4111.cisxo09blonu.us-east-1.rds.amazonaws.com/proj1part2"
 
 
 #
