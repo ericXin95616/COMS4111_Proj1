@@ -11,7 +11,7 @@ URL address of our web application:
 http://35.237.109.152:8111/
 
 
-We implemented everything specified in proposal of this project, except the bidding system.
+We implemented everything specified in [proposal](https://docs.google.com/document/d/1F6uljxcy-aL6SMWDKUkPb4jcIMiMbDHESwKemjK0syU/edit?usp=sharing) of this project, except the bidding system.
 Originally, we wanted to include a bidding system where many buyers could insert price for a product that they are willing to buy, and the buyer that inserted the highest price gets the chance to buy it. However, we realized that this is a redundant feature, as multiples of the same product could be sold by a seller.
 
 
